@@ -59,9 +59,21 @@
     }
 
     function formatStatus(status) {
-      var value = String(status || '').trim();
-      if (!value) return 'Não informado';
-      return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+      var normalized = normalizeStatus(status);
+      if (!normalized) return 'Não informado';
+
+      var labels = {
+        aprovado: 'Aprovado',
+        confirmado: 'Confirmado',
+        ativo: 'Ativo',
+        pendente: 'Pendente',
+        aguardando: 'Aguardando',
+        cancelado: 'Cancelado',
+        rejeitado: 'Rejeitado',
+        inativo: 'Inativo'
+      };
+
+      return labels[normalized] || (normalized.charAt(0).toUpperCase() + normalized.slice(1));
     }
 
     function getStatusClass(status) {
@@ -78,13 +90,36 @@
       return 'statusBadge statusBadge--default';
     }
 
+    function parseDateSafe(raw) {
+      if (raw === null || raw === undefined || raw === '') return null;
+
+      var value = String(raw).trim();
+      if (!value) return null;
+
+      var direct = new Date(value);
+      if (!isNaN(direct.getTime())) return direct;
+
+      var parts = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+      if (!parts) return null;
+
+      var day = Number(parts[1]);
+      var month = Number(parts[2]) - 1;
+      var year = Number(parts[3]);
+      var hour = Number(parts[4] || 0);
+      var minute = Number(parts[5] || 0);
+      var second = Number(parts[6] || 0);
+
+      var parsed = new Date(year, month, day, hour, minute, second);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
     function formatDateTime(raw) {
       if (raw === null || raw === undefined || raw === '') {
         return 'Não informada';
       }
 
-      var date = new Date(raw);
-      if (isNaN(date.getTime())) {
+      var date = parseDateSafe(raw);
+      if (!date) {
         return String(raw);
       }
 
