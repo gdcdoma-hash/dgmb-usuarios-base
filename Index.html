@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('Styles'); ?>
+  </head>
+  <body>
+    <div class="wrap">
+      <h2 class="title">DGMB — Usuários</h2>
+
+      <div class="controls">
+        <div class="row">
+          <label class="field">
+            <span>Nome</span>
+            <input id="fNome" type="text" placeholder="Buscar por nome" autocomplete="off" />
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="fStatus">
+              <option value="">Todos</option>
+              <option value="ATIVO">ATIVO</option>
+              <option value="INATIVO">INATIVO</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Cidade/UF</span>
+            <input id="fCidade" type="text" placeholder="Ex: São Luís/MA" autocomplete="off" />
+          </label>
+
+          <label class="field field-small">
+            <span>Por página</span>
+            <select id="fLimit">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="50">50</option>
+            </select>
+          </label>
+
+          <div class="btns">
+            <button id="btnAplicar" class="btn btn-primary">Aplicar</button>
+            <button id="btnLimpar" class="btn">Limpar</button>
+          </div>
+        </div>
+
+        <div class="meta">
+          <div id="loadingBox" class="loading" style="display:none;">Carregando...</div>
+          <div id="errorBox" class="error" style="display:none;"></div>
+          <div id="totalBox" class="total"></div>
+        </div>
+      </div>
+
+      <div class="tableWrap">
+        <table id="tbl" class="tbl">
+          <!-- TRAVA CRÍTICA: colgroup + larguras IMUTÁVEIS -->
+          <colgroup>
+            <col style="width:40%"><!-- Nome -->
+            <col style="width:150px"><!-- WhatsApp -->
+            <col style="width:22%"><!-- Cidade/UF -->
+            <col style="width:110px"><!-- Data -->
+            <col style="width:120px"><!-- Status -->
+            <col style="width:120px"><!-- ID DGMB -->
+          </colgroup>
+
+          <thead>
+            <tr>
+              <th data-sort="nome" class="sortable">Nome <span class="sortIcon" data-icon="nome"></span></th>
+              <th>WhatsApp</th>
+              <th data-sort="cidade_uf" class="sortable">Cidade/UF <span class="sortIcon" data-icon="cidade_uf"></span></th>
+              <th>Data</th>
+              <th data-sort="status" class="sortable">Status <span class="sortIcon" data-icon="status"></span></th>
+              <th>ID DGMB</th>
+            </tr>
+          </thead>
+
+          <tbody id="tbody">
+            <tr><td colspan="6" class="muted">Carregue para ver os usuários.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="pager">
+        <button id="btnPrev" class="btn">Anterior</button>
+        <div id="pageInfo" class="pageInfo"></div>
+        <button id="btnNext" class="btn">Próximo</button>
+      </div>
+    </div>
+
+    <?!= include('Scripts'); ?>
+  </body>
+</html>

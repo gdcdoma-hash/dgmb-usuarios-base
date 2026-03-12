@@ -1,0 +1,947 @@
+<!-- Scripts.html — DGMB_USUARIOS_BASE — RESPONSABILIDADE 11 (APENAS FRONTEND) -->
+<script>
+/* =========================================================
+   TRAVAS:
+   - NÃO mexer em Index.html / Styles.html
+   - safeDateBR DD/MM/AAAA
+   - checkColumnConfig + checkDateBR
+   - errorBox + retry sem apagar tabela
+   - isLoading + bloqueio
+   - requestSeq anti-resposta velha
+   - ordenação client-side + ícones
+   - debounce 350ms
+   - botão copiar WhatsApp na mesma célula (sem nova coluna)
+   - total geral via cache TTL 24h (sem chamada extra)
+   - RESPONSABILIDADE 11: cache leve páginas + short-circuit render + pendingFetch
+   ========================================================= */
+
+/* =========================
+   Helpers DOM (defensivo)
+   ========================= */
+function $(id) { return document.getElementById(id); }
+function _q(sel) { return document.querySelector(sel); }
+function _qa(sel) { return Array.from(document.querySelectorAll(sel)); }
+
+function getElFirst(idsOrSelectors) {
+  for (const k of idsOrSelectors) {
+    const el = (k.startsWith('#') || k.startsWith('.') || k.includes('[') || k.includes(' '))
+      ? _q(k)
+      : $(k);
+    if (el) return el;
+  }
+  return null;
+}
+function getFiltroNomeEl() {
+  return getElFirst([
+    'filtroNome',
+    'filterNome',
+    'nomeFilter',
+    'nome',
+    'txtNome',
+    'buscaNome',
+    'searchNome',
+    '#filtroNome',
+    '#filterNome',
+    '#nomeFilter',
+    '#nome',
+    '#txtNome',
+    '#buscaNome',
+    '#searchNome',
+    'input[name="filtro_nome"]',
+    'input[name="nome"]',
+    'input[name="filterNome"]',
+    'input[type="text"]'
+  ]);
+}
+
+function getFiltroStatusEl() {
+  return getElFirst([
+    'filtroStatus',
+    'filterStatus',
+    'statusFilter',
+    'status',
+    '#filtroStatus',
+    '#filterStatus',
+    '#statusFilter',
+    '#status',
+    'select[name="filtro_status"]',
+    'select[name="status"]'
+  ]);
+}
+
+function getFiltroCidadeEl() {
+  return getElFirst([
+    'filtroCidadeUF',
+    'filtroCidade',
+    'filterCidadeUF',
+    'cidadeFilter',
+    'cidade_uf',
+    'cidadeUf',
+    '#filtroCidadeUF',
+    '#filtroCidade',
+    '#filterCidadeUF',
+    '#cidadeFilter',
+    '#cidade_uf',
+    '#cidadeUf',
+    'input[name="filtro_cidade_uf"]',
+    'input[name="cidade_uf"]',
+    'input[name="cidadeUf"]'
+  ]);
+}
+
+function getLimitEl() {
+  return getElFirst([
+    'limitSelect',
+    'porPagina',
+    'selectLimit',
+    'pageSize',
+    'filtroLimit',
+    'qtdPorPagina',
+    'itensPorPagina',
+    '#limitSelect',
+    '#porPagina',
+    '#selectLimit',
+    '#pageSize',
+    '#filtroLimit',
+    '#qtdPorPagina',
+    '#itensPorPagina',
+    'select[name="limit"]',
+    'select[name="pageSize"]'
+  ]);
+}
+/* =========================
+   Estado e Config
+   ========================= */
+const STORAGE_KEY = 'DGMB_USUARIOS_BASE_STATE';
+
+let state = {
+  page: 1,
+  limit: 10,
+  filtros: { nome: '', status: '', cidade_uf: '' },
+  sort: { field: 'nome', dir: 'asc' }
+};
+
+let isLoading = false;
+let requestSeq = 0;
+
+// RESP 11: cache leve páginas (memória)
+const pageCache = new Map();
+const PAGE_CACHE_MAX = 10;
+
+// RESP 11: short-circuit render (assinatura)
+let lastRenderSig = null;
+
+// RESP 11: pending fetch (não perde refresh)
+let pendingFetch = false;
+let pendingPayload = null;
+let pendingForce = false;
+
+// Total geral cache TTL 24h (já existia; mantido)
+const TOTAL_TTL_MS = 24 * 60 * 60 * 1000;
+const TOTAL_CACHE_KEY = 'DGMB_USUARIOS_BASE_TOTAL_GERAL_CACHE'; // {total,ts}
+
+/* =========================
+   Elementos (NÃO ALTERAR INDEX)
+   ========================= */
+const els = {
+  inpNome: null,
+  selStatus: null,
+  inpCidade: null,
+  selLimit: null,
+  btnAplicar: null,
+  btnLimpar: null,
+  tbody: null,
+  btnPrev: null,
+  btnNext: null,
+  pageInfo: null,
+  totalInfo: null,
+  totalGeralInfo: null,
+  errorBox: null,
+  errorMsg: null,
+  retryBtn: null,
+  loadingBox: null
+};
+
+function bindEls() {
+  els.inpNome   = getElFirst(['filtroNome','filterNome','nomeFilter','#filtroNome','#filterNome','input[name="filtro_nome"]']);
+  els.selStatus = getElFirst(['filtroStatus','filterStatus','statusFilter','#filtroStatus','#filterStatus','select[name="filtro_status"]']);
+  els.inpCidade = getElFirst(['filtroCidadeUF','filtroCidade','filterCidadeUF','cidadeFilter','#filtroCidadeUF','#filterCidadeUF','input[name="filtro_cidade_uf"]']);
+
+  els.selLimit  = getElFirst([
+    'limitSelect',
+    'porPagina',
+    'selectLimit',
+    'pageSize',
+    'filtroLimit',
+    'qtdPorPagina',
+    'itensPorPagina',
+    '#limitSelect',
+    '#porPagina',
+    '#selectLimit',
+    '#pageSize',
+    '#filtroLimit',
+    '#qtdPorPagina',
+    '#itensPorPagina',
+    'select[name="limit"]',
+    'select[name="pageSize"]'
+  ]);
+
+  els.btnAplicar = getElFirst([
+    'btnAplicar',
+    'btnAplicarFiltro',
+    'aplicarFiltro',
+    '#btnAplicar',
+    '#btnAplicarFiltro',
+    '#aplicarFiltro',
+    'button[data-action="apply-filter"]'
+  ]);
+
+  els.btnLimpar = getElFirst([
+    'btnLimpar',
+    'btnLimparFiltro',
+    'limparFiltro',
+    '#btnLimpar',
+    '#btnLimparFiltro',
+    '#limparFiltro',
+    'button[data-action="clear-filter"]'
+  ]);
+
+  els.tbody = getElFirst(['tbodyUsuarios','usersTbody','tbody','#tbodyUsuarios','table tbody']);
+
+  els.btnPrev  = getElFirst(['btnPrev','prevBtn','#btnPrev','#prevBtn','button[data-action="prev"]']);
+  els.btnNext  = getElFirst(['btnNext','nextBtn','#btnNext','#nextBtn','button[data-action="next"]']);
+  els.pageInfo = getElFirst(['pageInfo','paginacaoInfo','#pageInfo','#paginacaoInfo','[data-role="pageInfo"]']);
+
+  els.totalInfo      = getElFirst(['totalInfo','infoTotal','#totalInfo','[data-role="totalInfo"]']);
+  els.totalGeralInfo = getElFirst(['totalGeralInfo','infoTotalGeral','#totalGeralInfo','[data-role="totalGeralInfo"]']);
+
+  els.errorBox  = getElFirst(['errorBox','#errorBox','[data-role="errorBox"]']);
+  els.errorMsg  = getElFirst(['errorMsg','#errorMsg','[data-role="errorMsg"]']);
+  els.retryBtn  = getElFirst(['retryBtn','#retryBtn','[data-role="retryBtn"]']);
+  els.loadingBox = getElFirst(['loadingBox','#loadingBox','[data-role="loadingBox"]']);
+}
+
+/* =========================
+   Persistência
+   ========================= */
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return;
+
+    state = {
+      page: Number(parsed.page || 1),
+      limit: Number(parsed.limit || 10),
+      filtros: {
+        nome: (parsed.filtros && parsed.filtros.nome) ? String(parsed.filtros.nome) : '',
+        status: (parsed.filtros && parsed.filtros.status) ? String(parsed.filtros.status) : '',
+        cidade_uf: (parsed.filtros && parsed.filtros.cidade_uf) ? String(parsed.filtros.cidade_uf) : ''
+      },
+      sort: {
+        field: (parsed.sort && parsed.sort.field) ? String(parsed.sort.field) : 'nome',
+        dir: (parsed.sort && (parsed.sort.dir === 'asc' || parsed.sort.dir === 'desc')) ? parsed.sort.dir : 'asc'
+      }
+    };
+
+    if (state.page < 1) state.page = 1;
+    if (!state.limit || state.limit < 1) state.limit = 10;
+  } catch (e) {}
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function applyStateToUI() {
+  const inpNome = getFiltroNomeEl();
+  const selStatus = getFiltroStatusEl();
+  const inpCidade = getFiltroCidadeEl();
+  const selLimit = getLimitEl();
+
+  if (inpNome) inpNome.value = state.filtros.nome || '';
+  if (selStatus) selStatus.value = state.filtros.status || '';
+  if (inpCidade) inpCidade.value = state.filtros.cidade_uf || '';
+  if (selLimit) selLimit.value = String(state.limit || 10);
+
+  // mantém ponte com els
+  els.inpNome = inpNome;
+  els.selStatus = selStatus;
+  els.inpCidade = inpCidade;
+  els.selLimit = selLimit;
+}
+
+/* =========================
+   Debounce (350ms)
+   ========================= */
+function debounce(fn, ms) {
+  let t = null;
+  return function(...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+
+/* =========================
+   Safe Date BR (TRAVA)
+   ========================= */
+function safeDateBR(input) {
+  try {
+    if (input == null || input === '') return '';
+
+    if (typeof input === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(input)) return input;
+
+    if (typeof input === 'string') {
+      const m = input.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (m) return `${m[3]}/${m[2]}/${m[1]}`;
+
+      const d = new Date(input);
+      if (!isNaN(d.getTime())) {
+        const dd = String(d.getDate()).padStart(2,'0');
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const yy = String(d.getFullYear());
+        return `${dd}/${mm}/${yy}`;
+      }
+      return '';
+    }
+
+    if (input instanceof Date && !isNaN(input.getTime())) {
+      const dd = String(input.getDate()).padStart(2,'0');
+      const mm = String(input.getMonth()+1).padStart(2,'0');
+      const yy = String(input.getFullYear());
+      return `${dd}/${mm}/${yy}`;
+    }
+
+    return '';
+  } catch (e) {
+    return '';
+  }
+}
+
+/* =========================
+   Auto-checks (mantidos)
+   ========================= */
+function checkColumnConfig() {
+  try {
+    const table = _q('table');
+    if (!table) return true;
+    const cs = window.getComputedStyle(table);
+    return (cs.tableLayout === 'fixed' || cs.tableLayout === 'auto');
+  } catch (e) { return true; }
+}
+function checkDateBR(sample) { return safeDateBR(sample); }
+
+/* =========================
+   UI: Loading / Error
+   ========================= */
+function setLoading(on) { if (els.loadingBox) els.loadingBox.style.display = on ? 'block' : 'none'; }
+function showError(msg) {
+  if (els.errorMsg) els.errorMsg.textContent = msg || 'Erro ao carregar.';
+  if (els.errorBox) els.errorBox.style.display = 'block';
+}
+function hideError() { if (els.errorBox) els.errorBox.style.display = 'none'; }
+
+/* =========================
+   Total geral cache TTL 24h
+   ========================= */
+function readTotalGeralCache() {
+  try {
+    const raw = localStorage.getItem(TOTAL_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.total !== 'number' || typeof obj.ts !== 'number') return null;
+    if ((Date.now() - obj.ts) > TOTAL_TTL_MS) return null;
+    return obj.total;
+  } catch (e) { return null; }
+}
+function writeTotalGeralCache(total) {
+  try {
+    if (typeof total !== 'number' || !isFinite(total)) return;
+    localStorage.setItem(TOTAL_CACHE_KEY, JSON.stringify({ total, ts: Date.now() }));
+  } catch (e) {}
+}
+function filtrosEstaoVazios(f) {
+  const nome = (f && f.nome) ? String(f.nome).trim() : '';
+  const status = (f && f.status) ? String(f.status).trim() : '';
+  const cidade = (f && f.cidade_uf) ? String(f.cidade_uf).trim() : '';
+  return !nome && !status && !cidade;
+}
+function updateTotalsUI(totalFiltrado, totalPages) {
+  try {
+    const totalGeralCached = readTotalGeralCache();
+    const semFiltro = filtrosEstaoVazios(state.filtros);
+
+    if (semFiltro) writeTotalGeralCache(Number(totalFiltrado || 0));
+
+    const totalGeral = semFiltro
+      ? Number(totalFiltrado || 0)
+      : (typeof totalGeralCached === 'number' ? totalGeralCached : Number(totalFiltrado || 0));
+
+    if (els.totalInfo) {
+      const tf = Number(totalFiltrado || 0);
+      const tp = Number(totalPages || 0);
+      els.totalInfo.textContent = `Total filtrado: ${tf} | Páginas: ${tp}`;
+    }
+    if (els.totalGeralInfo) {
+      els.totalGeralInfo.textContent = `Total geral: ${Number(totalGeral || 0)}`;
+    }
+  } catch (e) {}
+}
+
+/* =========================
+   Ordenação client-side
+   ========================= */
+function normalizeStr(s) {
+  return (s == null ? '' : String(s)).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function compareValues(a, b, dir) {
+  if (a == null) a = '';
+  if (b == null) b = '';
+  const A = normalizeStr(a);
+  const B = normalizeStr(b);
+  if (A < B) return dir === 'asc' ? -1 : 1;
+  if (A > B) return dir === 'asc' ? 1 : -1;
+  return 0;
+}
+function sortItemsClient(items) {
+  const { field, dir } = state.sort || { field: 'nome', dir: 'asc' };
+  const arr = Array.isArray(items) ? items.slice() : [];
+  arr.sort((x, y) => compareValues(x ? x[field] : '', y ? y[field] : '', dir));
+  return arr;
+}
+function updateSortIcons() {
+  try {
+    const ths = _qa('th[data-sort]');
+    if (!ths.length) return;
+    ths.forEach(th => {
+      const f = th.getAttribute('data-sort');
+      const icon = th.querySelector('.sortIcon') || th.querySelector('[data-role="sortIcon"]');
+      if (!icon) return;
+      if (f === state.sort.field) icon.textContent = state.sort.dir === 'asc' ? '↑' : '↓';
+      else icon.textContent = '';
+    });
+  } catch (e) {}
+}
+
+/* =========================
+   Botão Copiar WhatsApp
+   (AJUSTE: classes compatíveis com o CSS antigo)
+   ========================= */
+function safeText(s) { return (s == null) ? '' : String(s); }
+
+async function copyToClipboard(text) {
+  const t = safeText(text);
+  if (!t) return false;
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(t);
+      return true;
+    }
+  } catch (e) {}
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = t;
+    ta.style.position = 'fixed';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function buildWhatsappCell(whatsapp) {
+  const w = safeText(whatsapp);
+
+  // wrapper (sem estilo inline)
+  const wrap = document.createElement('div');
+  // múltiplas classes: mantém compatibilidade com versões antigas do CSS
+  wrap.className = 'whatsCellWrap whatsappCell whatsAppCell';
+
+  const span = document.createElement('span');
+  span.className = 'whatsNumber whatsappNumber';
+  span.textContent = w;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+
+  // IMPORTANTÍSSIMO:
+  // classes compatíveis para o CSS deixar "discreto, sem fundo"
+  // (não muda visual por JS; só dá os hooks pro Styles.html aplicar)
+  btn.className = [
+    'btnCopyWhats',   // nome usado em versões recentes
+    'btnCopy',        // comum
+    'copyBtn',        // comum
+    'btn-copy',       // comum
+    'whatsCopyBtn',   // comum
+    'linkBtn',        // comum (estilo link)
+    'btnLink'         // comum
+  ].join(' ');
+
+  btn.textContent = 'Copiar';
+
+  btn.addEventListener('click', async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    const ok = await copyToClipboard(w);
+    // mantém micro-feedback sem mexer no CSS
+    const old = btn.textContent;
+    btn.textContent = ok ? 'Copiado' : 'Falhou';
+    setTimeout(() => { btn.textContent = old; }, 900);
+  });
+
+  wrap.appendChild(span);
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+/* =========================
+   RESP 11: cache leve páginas
+   ========================= */
+function makeCacheKey(p) {
+  const keyObj = {
+    page: Number(p.page || 1),
+    limit: Number(p.limit || state.limit || 10),
+    filtros: {
+      nome: (p.filtros && p.filtros.nome) ? String(p.filtros.nome) : '',
+      status: (p.filtros && p.filtros.status) ? String(p.filtros.status) : '',
+      cidade_uf: (p.filtros && p.filtros.cidade_uf) ? String(p.filtros.cidade_uf) : ''
+    }
+  };
+  return JSON.stringify(keyObj);
+}
+function cachePut(key, resp) {
+  try {
+    if (!key) return;
+    if (pageCache.has(key)) pageCache.delete(key);
+    pageCache.set(key, resp);
+    while (pageCache.size > PAGE_CACHE_MAX) {
+      const oldestKey = pageCache.keys().next().value;
+      pageCache.delete(oldestKey);
+    }
+  } catch (e) {}
+}
+function cacheGet(key) {
+  try {
+    if (!key) return null;
+    if (!pageCache.has(key)) return null;
+    const v = pageCache.get(key);
+    pageCache.delete(key);
+    pageCache.set(key, v);
+    return v;
+  } catch (e) { return null; }
+}
+
+/* =========================
+   RESP 11: short-circuit render
+   ========================= */
+function fastHashDJB2(str) {
+  let h = 5381;
+  for (let i = 0; i < str.length; i++) h = ((h << 5) + h) ^ str.charCodeAt(i);
+  return (h >>> 0).toString(16);
+}
+function signatureForItems(items) {
+  try {
+    const arr = Array.isArray(items) ? items : [];
+    let s = `len=${arr.length}|`;
+    const take = arr.length <= 60 ? arr.length : 60;
+    for (let i = 0; i < take; i++) {
+      const it = arr[i] || {};
+      s += [
+        safeText(it.id_dgmb),
+        safeText(it.id_usuario),
+        safeText(it.nome),
+        safeText(it.status),
+        safeText(it.cidade_uf),
+        safeText(it.whatsapp),
+        safeText(it.data_criacao)
+      ].join('~') + '|';
+    }
+    if (arr.length > 60) {
+      const it = arr[arr.length - 1] || {};
+      s += 'last:' + [
+        safeText(it.id_dgmb),
+        safeText(it.id_usuario),
+        safeText(it.nome),
+        safeText(it.status),
+        safeText(it.cidade_uf),
+        safeText(it.whatsapp),
+        safeText(it.data_criacao)
+      ].join('~');
+    }
+    return fastHashDJB2(s);
+  } catch (e) {
+    return String(Date.now());
+  }
+}
+
+/* =========================
+   Render da tabela (NÃO muda colunas/ordem)
+   (AJUSTE: status renderiza como badge com classes compatíveis)
+   ========================= */
+function clearTbody() {
+  if (!els.tbody) return;
+  while (els.tbody.firstChild) els.tbody.removeChild(els.tbody.firstChild);
+}
+
+function buildStatusBadge(statusRaw) {
+  const st = safeText(statusRaw).toUpperCase();
+
+  const span = document.createElement('span');
+
+  // classes compatíveis com CSS antigo + novo
+  // (sem estilo inline)
+  span.className = [
+    'statusBadge',     // usado no seu projeto
+    'status-badge',    // comum
+    'badge',           // comum (bootstrap-like)
+    'badgeStatus',     // comum
+    'badge-status'     // comum
+  ].join(' ');
+
+  // muitos CSS usam data-status ou data-value pra pintar "ATIVO" verde
+  span.setAttribute('data-status', st);
+  span.setAttribute('data-value', st);
+
+  // também adiciona uma classe “status-ativo / status-inativo” (muito comum)
+  if (st) span.classList.add('status-' + normalizeStr(st)); // ex: status-ativo
+
+  span.textContent = st || '';
+  return span;
+}
+
+function renderTable(items, opts = {}) {
+  const force = !!opts.force;
+
+  const sig = signatureForItems(items);
+  if (!force && lastRenderSig && sig === lastRenderSig) return;
+
+  if (!els.tbody) return;
+
+  const arr = Array.isArray(items) ? items : [];
+  clearTbody();
+
+  // Ordem fixa:
+  // Nome | WhatsApp | Cidade/UF | Data | Status | ID DGMB
+  for (const it of arr) {
+    const tr = document.createElement('tr');
+
+    const tdNome = document.createElement('td');
+    tdNome.className = 'colNome';
+    tdNome.textContent = safeText(it && it.nome);
+    tr.appendChild(tdNome);
+
+    const tdWhats = document.createElement('td');
+    tdWhats.className = 'colWhats';
+    tdWhats.appendChild(buildWhatsappCell(it && it.whatsapp));
+    tr.appendChild(tdWhats);
+
+    const tdCidade = document.createElement('td');
+    tdCidade.className = 'colCidade';
+    tdCidade.textContent = safeText(it && it.cidade_uf);
+    tr.appendChild(tdCidade);
+
+    const tdData = document.createElement('td');
+    tdData.className = 'colData';
+    tdData.textContent = safeDateBR(it && it.data_criacao);
+    tr.appendChild(tdData);
+
+    const tdStatus = document.createElement('td');
+    tdStatus.className = 'colStatus';
+    tdStatus.appendChild(buildStatusBadge(it && it.status)); // <- garante badge
+    tr.appendChild(tdStatus);
+
+    const tdId = document.createElement('td');
+    tdId.className = 'colIdDgmb';
+    tdId.textContent = safeText(it && it.id_dgmb);
+    tr.appendChild(tdId);
+
+    els.tbody.appendChild(tr);
+  }
+
+  lastRenderSig = sig;
+}
+
+/* =========================
+   Paginação UI
+   ========================= */
+function updatePaginationUI(page, totalPages) {
+  const p = Number(page || 1);
+  const tp = Number(totalPages || 1);
+  if (els.pageInfo) els.pageInfo.textContent = `Página ${p} de ${tp}`;
+  if (els.btnPrev) els.btnPrev.disabled = (p <= 1) || tp <= 1;
+  if (els.btnNext) els.btnNext.disabled = (p >= tp) || tp <= 1;
+}
+
+/* =========================
+   Fetch helpers + pending
+   ========================= */
+function buildPayloadFromState() {
+  return {
+    page: Number(state.page || 1),
+    limit: Number(state.limit || 10),
+    filtros: {
+      nome: state.filtros.nome || '',
+      status: state.filtros.status || '',
+      cidade_uf: state.filtros.cidade_uf || ''
+    }
+  };
+}
+
+function queuePendingFetch(payload, force) {
+  pendingFetch = true;
+  pendingPayload = payload;
+  pendingForce = !!force;
+}
+
+function runPendingIfAny() {
+  if (!pendingFetch) return;
+  const p = pendingPayload;
+  const f = pendingForce;
+  pendingFetch = false;
+  pendingPayload = null;
+  pendingForce = false;
+  fetchAndRender(p, { force: f });
+}
+
+/* =========================
+   Fetch principal
+   ========================= */
+function fetchAndRender(payloadOverride, opts = {}) {
+  const force = !!opts.force;
+  const payload = payloadOverride || buildPayloadFromState();
+  const cacheKey = makeCacheKey(payload);
+
+  // Cache page (RESP 11): se tem, renderiza sem backend
+  const cached = cacheGet(cacheKey);
+  if (cached && cached.ok && cached.data && cached.data.data) {
+    hideError();
+    const d = cached.data.data;
+    const itemsSorted = sortItemsClient(d.items || []);
+    renderTable(itemsSorted, { force });
+    updatePaginationUI(d.page, d.totalPages);
+    updateTotalsUI(d.total, d.totalPages);
+    updateSortIcons();
+    return;
+  }
+
+  if (isLoading) {
+    queuePendingFetch(payload, force);
+    return;
+  }
+
+  isLoading = true;
+  setLoading(true);
+  hideError();
+
+  const mySeq = ++requestSeq;
+
+  const done = () => {
+    isLoading = false;
+    setLoading(false);
+    runPendingIfAny();
+  };
+
+  try {
+    google.script.run
+      .withSuccessHandler((resp) => {
+        if (mySeq !== requestSeq) { done(); return; }
+
+        if (!resp || resp.ok !== true || !resp.data) {
+          showError('Resposta inválida da API.');
+          done();
+          return;
+        }
+
+        const d = resp.data;
+        const items = (d && d.items) ? d.items : [];
+
+        const itemsSorted = sortItemsClient(items);
+
+        cachePut(cacheKey, { ok: true, data: resp });
+
+        renderTable(itemsSorted, { force });
+        updatePaginationUI(d.page, d.totalPages);
+        updateTotalsUI(d.total, d.totalPages);
+        updateSortIcons();
+
+        done();
+      })
+      .withFailureHandler((err) => {
+        if (mySeq !== requestSeq) { done(); return; }
+
+        const msg = (err && err.message) ? err.message : String(err || 'Falha ao carregar.');
+        showError(msg);
+        // NÃO apaga tabela
+        done();
+      })
+      .apiUsuariosListarResumo(payload);
+  } catch (e) {
+    showError('Erro inesperado ao chamar API.');
+    done();
+  }
+}
+
+/* =========================
+   Eventos UI
+   ========================= */
+function onFilterChangeResetPageAndFetch() {
+  state.page = 1;
+  saveState();
+  fetchAndRender(null, { force: false });
+}
+
+function onAplicarFiltros() {
+  const inpNome = getFiltroNomeEl();
+  const selStatus = getFiltroStatusEl();
+  const inpCidade = getFiltroCidadeEl();
+
+  state.filtros.nome = inpNome ? (inpNome.value || '').trim() : '';
+  state.filtros.status = selStatus ? (selStatus.value || '').trim() : '';
+  state.filtros.cidade_uf = inpCidade ? (inpCidade.value || '').trim() : '';
+
+  state.page = 1;
+  saveState();
+  fetchAndRender(null, { force: true });
+}
+
+function onLimparFiltros() {
+  const inpNome = getFiltroNomeEl();
+  const selStatus = getFiltroStatusEl();
+  const inpCidade = getFiltroCidadeEl();
+
+  if (inpNome) inpNome.value = '';
+  if (selStatus) selStatus.value = '';
+  if (inpCidade) inpCidade.value = '';
+
+  state.filtros.nome = '';
+  state.filtros.status = '';
+  state.filtros.cidade_uf = '';
+  state.page = 1;
+
+  saveState();
+  fetchAndRender(null, { force: true });
+}
+const onNomeInput = debounce(() => {
+  const inpNome = getFiltroNomeEl();
+  if (!inpNome) return;
+  state.filtros.nome = inpNome.value || '';
+  onFilterChangeResetPageAndFetch();
+}, 350);
+
+const onCidadeInput = debounce(() => {
+  const inpCidade = getFiltroCidadeEl();
+  if (!inpCidade) return;
+  state.filtros.cidade_uf = inpCidade.value || '';
+  onFilterChangeResetPageAndFetch();
+}, 350);
+
+function onStatusChange() {
+  const selStatus = getFiltroStatusEl();
+  if (!selStatus) return;
+  state.filtros.status = selStatus.value || '';
+  onFilterChangeResetPageAndFetch();
+}
+
+function onLimitChange() {
+  const selLimit = getLimitEl();
+  if (!selLimit) return;
+  const v = Number(selLimit.value || 10);
+  state.limit = v || 10;
+  state.page = 1;
+  saveState();
+  fetchAndRender(null, { force: true });
+}
+
+function onPrev() {
+  if (state.page <= 1) return;
+  state.page -= 1;
+  saveState();
+  fetchAndRender(null, { force: false });
+}
+
+function onNext() {
+  state.page += 1;
+  saveState();
+  fetchAndRender(null, { force: false });
+}
+
+function onRetry() {
+  hideError();
+  fetchAndRender(null, { force: true });
+}
+
+function bindSortHeaderClicks() {
+  const ths = _qa('th[data-sort]');
+  if (!ths.length) return;
+
+  ths.forEach(th => {
+    th.style.cursor = th.style.cursor || 'pointer';
+    th.addEventListener('click', () => {
+      const f = th.getAttribute('data-sort');
+      if (!f) return;
+
+      if (state.sort.field === f) state.sort.dir = (state.sort.dir === 'asc') ? 'desc' : 'asc';
+      else { state.sort.field = f; state.sort.dir = 'asc'; }
+
+      saveState();
+      updateSortIcons();
+
+      // ordenação muda ordem => re-render
+      const payload = buildPayloadFromState();
+      const key = makeCacheKey(payload);
+      const cached = cacheGet(key);
+
+      if (cached && cached.ok && cached.data && cached.data.data) {
+        const d = cached.data.data;
+        const itemsSorted = sortItemsClient(d.items || []);
+        renderTable(itemsSorted, { force: true });
+        return;
+      }
+
+      fetchAndRender(payload, { force: true });
+    });
+  });
+}
+
+/* =========================
+   Init
+   ========================= */
+function initDGMBUsuariosBase() {
+  bindEls();
+  loadState();
+  applyStateToUI();
+
+   els.inpNome = getFiltroNomeEl();
+  els.selStatus = getFiltroStatusEl();
+  els.inpCidade = getFiltroCidadeEl();
+  els.selLimit = getLimitEl();
+
+  if (els.inpNome)   els.inpNome.addEventListener('input', onNomeInput);
+  if (els.inpCidade) els.inpCidade.addEventListener('input', onCidadeInput);
+  if (els.selStatus) els.selStatus.addEventListener('change', onStatusChange);
+  if (els.selLimit)  els.selLimit.addEventListener('change', onLimitChange);
+
+  if (els.btnAplicar) els.btnAplicar.addEventListener('click', onAplicarFiltros);
+  if (els.btnLimpar)  els.btnLimpar.addEventListener('click', onLimparFiltros);
+
+  if (els.btnPrev) els.btnPrev.addEventListener('click', onPrev);
+  if (els.btnNext) els.btnNext.addEventListener('click', onNext);
+
+  if (els.retryBtn) els.retryBtn.addEventListener('click', onRetry);
+
+  bindSortHeaderClicks();
+  updateSortIcons();
+
+  try { checkColumnConfig(); } catch(e) {}
+  try { checkDateBR('2026-03-03'); } catch(e) {}
+
+  fetchAndRender(null, { force: true });
+}
+
+document.addEventListener('DOMContentLoaded', initDGMBUsuariosBase);
+</script>

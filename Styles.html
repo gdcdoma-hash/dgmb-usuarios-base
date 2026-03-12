@@ -1,0 +1,111 @@
+<style>
+  :root{
+    --bg:#0f1115;
+    --card:#151822;
+    --line:#2a2f3a;
+    --text:#e9eef7;
+    --muted:#9aa3b2;
+    --danger:#ff5a6b;
+    --ok:#27c26a;
+    --warn:#ffcc66;
+    --btn:#222636;
+    --btn2:#2b3150;
+  }
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial;}
+  .wrap{max-width:1200px;margin:18px auto;padding:0 14px;}
+  .title{margin:0 0 12px 0;font-weight:700;font-size:20px;}
+  .controls{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;}
+  .row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;}
+  .field{display:flex;flex-direction:column;gap:6px;min-width:180px;}
+  .field span{font-size:12px;color:var(--muted);}
+  .field input,.field select{
+    background:#0f1320;border:1px solid var(--line);border-radius:8px;color:var(--text);
+    padding:8px 10px;outline:none;
+  }
+  .field-small{min-width:120px;}
+  .btns{display:flex;gap:8px;margin-left:auto;}
+  .btn{
+    background:var(--btn);border:1px solid var(--line);color:var(--text);
+    padding:9px 12px;border-radius:8px;cursor:pointer;
+  }
+  .btn:hover{background:var(--btn2);}
+  .btn-primary{background:#2b6cff;border-color:#2b6cff;}
+  .btn-primary:hover{filter:brightness(1.05);}
+  .meta{display:flex;gap:10px;align-items:center;margin-top:10px;}
+  .loading{color:var(--warn);font-size:13px;}
+  .error{color:var(--danger);font-size:13px;white-space:pre-wrap;}
+  .total{margin-left:auto;color:var(--muted);font-size:13px;}
+  .tableWrap{
+    background:var(--card);border:1px solid var(--line);border-radius:10px;overflow-x:auto;
+  }
+  table.tbl{
+    width:100%;
+    min-width:860px; /* TRAVA: responsividade com scroll */
+    border-collapse:separate;
+    border-spacing:0;
+    table-layout:fixed; /* TRAVA CRÍTICA */
+  }
+  thead th{
+    position:sticky;top:0;background:rgba(21,24,34,.98);
+    text-align:left;font-size:12px;color:var(--muted);
+    padding:10px;border-bottom:1px solid var(--line);
+  }
+  tbody td{
+    padding:10px;border-bottom:1px solid rgba(42,47,58,.7);
+    font-size:13px;vertical-align:middle;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  tbody tr:hover td{background:rgba(255,255,255,.02);}
+  .muted{color:var(--muted);}
+
+  .sortable{cursor:pointer;user-select:none;}
+  .sortIcon{display:inline-block;min-width:14px;color:var(--muted);}
+
+  .badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    padding:3px 8px;border-radius:999px;font-size:12px;font-weight:700;
+    border:1px solid rgba(255,255,255,.12);
+  }
+  .badge.ok{background:rgba(39,194,106,.12);color:#7dffb0;border-color:rgba(39,194,106,.25);}
+  .badge.off{background:rgba(255,90,107,.10);color:#ff9aa5;border-color:rgba(255,90,107,.25);}
+
+  .pager{display:flex;align-items:center;gap:10px;margin-top:12px;}
+  .pageInfo{color:var(--muted);font-size:13px;margin:0 auto;}
+
+  /* ✅ Responsabilidade 10: botão copiar dentro da célula WhatsApp (SEM nova coluna) */
+  .waCell{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    min-width:0; /* permite ellipsis no número */
+  }.waCell{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  min-width:0;
+}
+
+.waNum{
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.btnCopy{
+  flex:0 0 auto;
+  padding:3px 6px;
+  border-radius:6px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:var(--text);
+  font-size:11px;
+  cursor:pointer;
+  line-height:1;
+  white-space:nowrap;
+}
+  .btnCopy:hover{background:rgba(255,255,255,.10);}
+  .btnCopy.ok{border-color:rgba(39,194,106,.35);background:rgba(39,194,106,.14);}
+</style>
