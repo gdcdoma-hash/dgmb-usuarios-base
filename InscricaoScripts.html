@@ -5,6 +5,7 @@
       errorBox: document.getElementById('errorBox'),
       emptyBox: document.getElementById('emptyBox'),
       tableWrap: document.getElementById('tableWrap'),
+      totalBadge: document.getElementById('totalBadge'),
       listMeta: document.getElementById('listMeta'),
       tbody: document.getElementById('tbody')
     };
@@ -13,6 +14,7 @@
       if (els.tableWrap) els.tableWrap.style.display = 'none';
       if (els.tbody) els.tbody.innerHTML = '';
       if (els.listMeta) els.listMeta.textContent = '';
+      if (els.totalBadge) els.totalBadge.textContent = '';
     }
 
     function setStatusVisibility(showLoading, showErrorState, showEmptyState, showList) {
@@ -45,6 +47,11 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+    }
+
+    function toDisplayValue(value) {
+      var normalized = String(value === null || value === undefined ? '' : value).trim();
+      return normalized || '—';
     }
 
     function normalizeStatus(status) {
@@ -94,7 +101,7 @@
       }
     }
 
-    function renderRows(items) {
+    function renderRows(items, total) {
       if (!els.tbody) return;
 
       var html = '';
@@ -102,19 +109,26 @@
         var item = items[i] || {};
         var statusText = formatStatus(item.status);
         var statusClass = getStatusClass(item.status);
+
         html += '<tr>' +
-          '<td>' + escapeHtml(item.id_inscricao) + '</td>' +
-          '<td>' + escapeHtml(item.id_usuario) + '</td>' +
-          '<td>' + escapeHtml(item.id_evento) + '</td>' +
-          '<td><span class="' + statusClass + '">' + escapeHtml(statusText) + '</span></td>' +
-          '<td>' + escapeHtml(formatDateTime(item.data_inscricao)) + '</td>' +
+          '<td class="colInscricao">' + escapeHtml(toDisplayValue(item.id_inscricao)) + '</td>' +
+          '<td class="colUsuario">' + escapeHtml(toDisplayValue(item.id_usuario)) + '</td>' +
+          '<td class="colEvento">' + escapeHtml(toDisplayValue(item.id_evento)) + '</td>' +
+          '<td class="colStatus"><span class="' + statusClass + '">' + escapeHtml(statusText) + '</span></td>' +
+          '<td class="colData">' + escapeHtml(formatDateTime(item.data_inscricao)) + '</td>' +
           '</tr>';
       }
 
       els.tbody.innerHTML = html;
-      if (els.listMeta) {
-        els.listMeta.textContent = items.length + ' inscrição(ões) encontrada(s).';
+
+      if (els.totalBadge) {
+        els.totalBadge.textContent = 'Total de inscrições: ' + total;
       }
+
+      if (els.listMeta) {
+        els.listMeta.textContent = 'Exibindo ' + items.length + ' registro(s) nesta visualização.';
+      }
+
       setStatusVisibility(false, false, false, true);
     }
 
@@ -132,13 +146,16 @@
             return;
           }
 
-          var items = Array.isArray(resp.data.items) ? resp.data.items : [];
+          var data = resp.data || {};
+          var items = Array.isArray(data.items) ? data.items : [];
+          var total = Number(data.total) || items.length;
+
           if (!items.length) {
             showEmpty();
             return;
           }
 
-          renderRows(items);
+          renderRows(items, total);
         })
         .withFailureHandler(function (err) {
           showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
