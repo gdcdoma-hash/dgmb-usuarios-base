@@ -1,5 +1,5 @@
 /**
- * Config.gs (SEM variáveis globais para não colidir com Code.gs)
+ * UsuarioConfig.gs (SEM variáveis globais para não colidir com Code.gs)
  * Centraliza config via FUNÇÕES (não gera "repetição de variável").
  */
 
