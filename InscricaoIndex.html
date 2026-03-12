@@ -8,7 +8,7 @@
     <div class="wrap">
       <header class="header">
         <h2 class="title">DGMB — Inscrições</h2>
-        <p class="subtitle">Listagem de inscrições da aba INSCRICOES.</p>
+        <p class="subtitle">Consulta operacional das inscrições registradas na aba INSCRICOES.</p>
       </header>
 
       <div id="loadingBox" class="status">Carregando inscrições...</div>
@@ -19,15 +19,18 @@
       </div>
 
       <div id="tableWrap" class="tableWrap" style="display:none;">
-        <div id="listMeta" class="listMeta" aria-live="polite"></div>
+        <div class="listTopBar">
+          <div id="totalBadge" class="totalBadge" aria-live="polite"></div>
+          <div id="listMeta" class="listMeta" aria-live="polite"></div>
+        </div>
         <table class="tbl">
           <thead>
             <tr>
-              <th>ID Inscrição</th>
-              <th>ID Usuário</th>
-              <th>ID Evento</th>
-              <th>Status</th>
-              <th>Data Inscrição</th>
+              <th>Inscrição</th>
+              <th>Usuário</th>
+              <th>Evento</th>
+              <th>Situação</th>
+              <th>Data da inscrição</th>
             </tr>
           </thead>
           <tbody id="tbody"></tbody>

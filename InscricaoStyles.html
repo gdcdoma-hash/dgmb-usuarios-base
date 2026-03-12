@@ -57,14 +57,34 @@
     color: #111827;
   }
 
-  .listMeta {
-    margin: 0 0 10px;
-    color: #4b5563;
-    font-size: 13px;
-  }
-
   .tableWrap {
     overflow-x: auto;
+  }
+
+  .listTopBar {
+    margin: 0 0 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .totalBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1e40af;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .listMeta {
+    color: #4b5563;
+    font-size: 13px;
   }
 
   .tbl {
@@ -92,6 +112,18 @@
 
   .tbl tbody tr:nth-child(even) {
     background: #fafafa;
+  }
+
+  .colInscricao,
+  .colUsuario,
+  .colEvento {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 13px;
+  }
+
+  .colStatus,
+  .colData {
+    white-space: nowrap;
   }
 
   .statusBadge {
@@ -145,6 +177,10 @@
 
     .title {
       font-size: 22px;
+    }
+
+    .listTopBar {
+      align-items: flex-start;
     }
 
     .tbl th,
