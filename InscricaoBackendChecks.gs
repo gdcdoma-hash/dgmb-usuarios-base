@@ -47,6 +47,15 @@ function buildInscricoesHeaderMap_(headerRow) {
   return canonicalMap;
 }
 
+function getInscricoesAcceptedAliases_() {
+  var out = {};
+  for (var i = 0; i < DGMB_INSCRICOES_FIELDS_.length; i++) {
+    var field = DGMB_INSCRICOES_FIELDS_[i];
+    out[field] = (DGMB_INSCRICOES_FIELD_ALIASES_[field] || [field]).slice();
+  }
+  return out;
+}
+
 function normalizeInscricaoHeaderKey_(value) {
   return String(value || '')
     .toLowerCase()

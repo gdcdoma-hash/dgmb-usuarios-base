@@ -16,7 +16,10 @@ function inscricaoRepoListarResumo_(payloadNormalizado) {
   if (!chk.ok) {
     var err = new Error('Cabeçalho da aba INSCRICOES está faltando colunas mínimas.');
     err.code = 'HEADER_MISSING_COLUMNS';
-    err.details = { missing: chk.missing || [] };
+    err.details = {
+      missing: chk.missing || [],
+      acceptedAliases: getInscricoesAcceptedAliases_()
+    };
     throw err;
   }
 
