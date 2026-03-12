@@ -3,6 +3,10 @@
  * Ponto de extensão do módulo INSCRIÇÕES.
  */
 
+function inscricaoControllerListarResumo_(payloadNormalizado) {
+  return inscricaoServiceListarResumo_(payloadNormalizado);
+}
+
 function inscricaoControllerHealthcheck_() {
   return {
     ok: true,

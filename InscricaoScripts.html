@@ -1,9 +1,100 @@
 <script>
   (function () {
-    var statusBox = document.getElementById('statusBox');
-    if (!statusBox) return;
+    var els = {
+      loadingBox: document.getElementById('loadingBox'),
+      errorBox: document.getElementById('errorBox'),
+      emptyBox: document.getElementById('emptyBox'),
+      tableWrap: document.getElementById('tableWrap'),
+      tbody: document.getElementById('tbody')
+    };
 
-    statusBox.textContent = 'Módulo INSCRIÇÕES carregado com sucesso.';
-    statusBox.classList.add('ok');
+    function setLoading(on) {
+      if (!els.loadingBox) return;
+      els.loadingBox.style.display = on ? 'block' : 'none';
+    }
+
+    function showError(message) {
+      if (!els.errorBox) return;
+      els.errorBox.textContent = message || 'Erro ao carregar inscrições.';
+      els.errorBox.style.display = 'block';
+      if (els.tableWrap) els.tableWrap.style.display = 'none';
+    }
+
+    function hideError() {
+      if (els.errorBox) els.errorBox.style.display = 'none';
+    }
+
+    function showEmpty() {
+      if (els.emptyBox) els.emptyBox.style.display = 'block';
+      if (els.tableWrap) els.tableWrap.style.display = 'none';
+      if (els.tbody) els.tbody.innerHTML = '';
+    }
+
+    function hideEmpty() {
+      if (els.emptyBox) els.emptyBox.style.display = 'none';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function renderRows(items) {
+      if (!els.tbody) return;
+
+      var html = '';
+      for (var i = 0; i < items.length; i++) {
+        var item = items[i] || {};
+        html += '<tr>' +
+          '<td>' + escapeHtml(item.id_inscricao) + '</td>' +
+          '<td>' + escapeHtml(item.id_usuario) + '</td>' +
+          '<td>' + escapeHtml(item.id_evento) + '</td>' +
+          '<td>' + escapeHtml(item.status) + '</td>' +
+          '<td>' + escapeHtml(item.data_inscricao) + '</td>' +
+          '</tr>';
+      }
+
+      els.tbody.innerHTML = html;
+      if (els.tableWrap) els.tableWrap.style.display = 'block';
+    }
+
+    function carregarInscricoes() {
+      setLoading(true);
+      hideError();
+      hideEmpty();
+      if (els.tableWrap) els.tableWrap.style.display = 'none';
+
+      google.script.run
+        .withSuccessHandler(function (resp) {
+          setLoading(false);
+
+          if (!resp || !resp.ok || !resp.data) {
+            var msg = (resp && resp.error && resp.error.message)
+              ? resp.error.message
+              : 'Falha ao obter inscrições.';
+            showError(msg);
+            return;
+          }
+
+          var items = Array.isArray(resp.data.items) ? resp.data.items : [];
+          if (!items.length) {
+            showEmpty();
+            return;
+          }
+
+          renderRows(items);
+        })
+        .withFailureHandler(function (err) {
+          setLoading(false);
+          showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
+        })
+        .apiInscricoesListarResumo({ page: 1, limit: 50 });
+    }
+
+    carregarInscricoes();
   })();
 </script>

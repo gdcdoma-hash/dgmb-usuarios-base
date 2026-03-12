@@ -20,7 +20,7 @@ function inscricaoRepoListarResumo_(payloadNormalizado) {
     throw err;
   }
 
-  var map = _dgmbInscricaoBuildHeaderMap_(header);
+  var map = buildInscricoesHeaderMap_(header);
   var out = [];
 
   for (var r = 1; r < values.length; r++) {
@@ -34,15 +34,6 @@ function inscricaoRepoListarResumo_(payloadNormalizado) {
   return { items: out, total: out.length };
 }
 
-function _dgmbInscricaoBuildHeaderMap_(headerRow) {
-  var map = {};
-  for (var i = 0; i < headerRow.length; i++) {
-    var key = String(headerRow[i] || '').trim().toLowerCase();
-    if (key) map[key] = i;
-  }
-  return map;
-}
-
 function _dgmbInscricaoRowIsEmpty_(row) {
   if (!row || !row.length) return true;
   for (var i = 0; i < row.length; i++) {
@@ -52,9 +43,9 @@ function _dgmbInscricaoRowIsEmpty_(row) {
   return true;
 }
 
-function _dgmbInscricaoGetByKey_(row, map, key) {
-  if (!map || map[key] === undefined) return '';
-  var idx = map[key];
+function _dgmbInscricaoGetByField_(row, map, canonicalField) {
+  if (!map || map[canonicalField] === undefined) return '';
+  var idx = map[canonicalField];
   var v = row[idx];
   return (v === null || v === undefined) ? '' : v;
 }
@@ -83,11 +74,11 @@ function _dgmbInscricaoRowToItem_(row, map) {
     data_inscricao: ''
   };
 
-  item.id_inscricao = _dgmbInscricaoToStr_(_dgmbInscricaoGetByKey_(row, map, 'id_inscricao'));
-  item.id_usuario = _dgmbInscricaoToStr_(_dgmbInscricaoGetByKey_(row, map, 'id_usuario'));
-  item.id_evento = _dgmbInscricaoToStr_(_dgmbInscricaoGetByKey_(row, map, 'id_evento'));
-  item.status = _dgmbInscricaoToStr_(_dgmbInscricaoGetByKey_(row, map, 'status'));
-  item.data_inscricao = _dgmbInscricaoToISODate_(_dgmbInscricaoGetByKey_(row, map, 'data_inscricao'));
+  item.id_inscricao = _dgmbInscricaoToStr_(_dgmbInscricaoGetByField_(row, map, 'id_inscricao'));
+  item.id_usuario = _dgmbInscricaoToStr_(_dgmbInscricaoGetByField_(row, map, 'id_usuario'));
+  item.id_evento = _dgmbInscricaoToStr_(_dgmbInscricaoGetByField_(row, map, 'id_evento'));
+  item.status = _dgmbInscricaoToStr_(_dgmbInscricaoGetByField_(row, map, 'status'));
+  item.data_inscricao = _dgmbInscricaoToISODate_(_dgmbInscricaoGetByField_(row, map, 'data_inscricao'));
 
   return item;
 }
