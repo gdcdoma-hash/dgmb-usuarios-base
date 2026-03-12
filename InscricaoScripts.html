@@ -5,33 +5,37 @@
       errorBox: document.getElementById('errorBox'),
       emptyBox: document.getElementById('emptyBox'),
       tableWrap: document.getElementById('tableWrap'),
+      listMeta: document.getElementById('listMeta'),
       tbody: document.getElementById('tbody')
     };
 
+    function hideTable() {
+      if (els.tableWrap) els.tableWrap.style.display = 'none';
+      if (els.tbody) els.tbody.innerHTML = '';
+      if (els.listMeta) els.listMeta.textContent = '';
+    }
+
+    function setStatusVisibility(showLoading, showErrorState, showEmptyState, showList) {
+      if (els.loadingBox) els.loadingBox.style.display = showLoading ? 'block' : 'none';
+      if (els.errorBox) els.errorBox.style.display = showErrorState ? 'block' : 'none';
+      if (els.emptyBox) els.emptyBox.style.display = showEmptyState ? 'block' : 'none';
+      if (els.tableWrap) els.tableWrap.style.display = showList ? 'block' : 'none';
+    }
+
     function setLoading(on) {
-      if (!els.loadingBox) return;
-      els.loadingBox.style.display = on ? 'block' : 'none';
+      setStatusVisibility(on, false, false, false);
     }
 
     function showError(message) {
       if (!els.errorBox) return;
       els.errorBox.textContent = message || 'Erro ao carregar inscrições.';
-      els.errorBox.style.display = 'block';
-      if (els.tableWrap) els.tableWrap.style.display = 'none';
-    }
-
-    function hideError() {
-      if (els.errorBox) els.errorBox.style.display = 'none';
+      setStatusVisibility(false, true, false, false);
+      hideTable();
     }
 
     function showEmpty() {
-      if (els.emptyBox) els.emptyBox.style.display = 'block';
-      if (els.tableWrap) els.tableWrap.style.display = 'none';
-      if (els.tbody) els.tbody.innerHTML = '';
-    }
-
-    function hideEmpty() {
-      if (els.emptyBox) els.emptyBox.style.display = 'none';
+      setStatusVisibility(false, false, true, false);
+      hideTable();
     }
 
     function escapeHtml(value) {
@@ -43,35 +47,83 @@
         .replace(/'/g, '&#39;');
     }
 
+    function normalizeStatus(status) {
+      return String(status || '').trim().toLowerCase();
+    }
+
+    function formatStatus(status) {
+      var value = String(status || '').trim();
+      if (!value) return 'Não informado';
+      return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+    }
+
+    function getStatusClass(status) {
+      var normalized = normalizeStatus(status);
+      if (normalized === 'aprovado' || normalized === 'confirmado' || normalized === 'ativo') {
+        return 'statusBadge statusBadge--aprovado';
+      }
+      if (normalized === 'pendente' || normalized === 'aguardando') {
+        return 'statusBadge statusBadge--pendente';
+      }
+      if (normalized === 'cancelado' || normalized === 'rejeitado' || normalized === 'inativo') {
+        return 'statusBadge statusBadge--cancelado';
+      }
+      return 'statusBadge statusBadge--default';
+    }
+
+    function formatDateTime(raw) {
+      if (raw === null || raw === undefined || raw === '') {
+        return 'Não informada';
+      }
+
+      var date = new Date(raw);
+      if (isNaN(date.getTime())) {
+        return String(raw);
+      }
+
+      try {
+        return new Intl.DateTimeFormat('pt-BR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }).format(date);
+      } catch (e) {
+        return date.toLocaleString();
+      }
+    }
+
     function renderRows(items) {
       if (!els.tbody) return;
 
       var html = '';
       for (var i = 0; i < items.length; i++) {
         var item = items[i] || {};
+        var statusText = formatStatus(item.status);
+        var statusClass = getStatusClass(item.status);
         html += '<tr>' +
           '<td>' + escapeHtml(item.id_inscricao) + '</td>' +
           '<td>' + escapeHtml(item.id_usuario) + '</td>' +
           '<td>' + escapeHtml(item.id_evento) + '</td>' +
-          '<td>' + escapeHtml(item.status) + '</td>' +
-          '<td>' + escapeHtml(item.data_inscricao) + '</td>' +
+          '<td><span class="' + statusClass + '">' + escapeHtml(statusText) + '</span></td>' +
+          '<td>' + escapeHtml(formatDateTime(item.data_inscricao)) + '</td>' +
           '</tr>';
       }
 
       els.tbody.innerHTML = html;
-      if (els.tableWrap) els.tableWrap.style.display = 'block';
+      if (els.listMeta) {
+        els.listMeta.textContent = items.length + ' inscrição(ões) encontrada(s).';
+      }
+      setStatusVisibility(false, false, false, true);
     }
 
     function carregarInscricoes() {
       setLoading(true);
-      hideError();
-      hideEmpty();
-      if (els.tableWrap) els.tableWrap.style.display = 'none';
+      hideTable();
 
       google.script.run
         .withSuccessHandler(function (resp) {
-          setLoading(false);
-
           if (!resp || !resp.ok || !resp.data) {
             var msg = (resp && resp.error && resp.error.message)
               ? resp.error.message
@@ -89,7 +141,6 @@
           renderRows(items);
         })
         .withFailureHandler(function (err) {
-          setLoading(false);
           showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
         })
         .apiInscricoesListarResumo({ page: 1, limit: 50 });
