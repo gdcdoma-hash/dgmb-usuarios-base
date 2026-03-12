@@ -10,7 +10,7 @@
 const SHEET_USUARIOS_NAME = 'USUARIOS';
 */
 function doGet(e) {
-  const tpl = HtmlService.createTemplateFromFile('Index');
+  const tpl = HtmlService.createTemplateFromFile('UsuarioIndex');
   tpl.APP_NAME = 'DGMB - Usuários (Base)';
   const html = tpl.evaluate()
     .setTitle('DGMB - Usuários')
