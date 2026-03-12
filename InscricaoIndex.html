@@ -7,8 +7,26 @@
   <body>
     <div class="wrap">
       <h2 class="title">DGMB — Inscrições</h2>
-      <p class="subtitle">Módulo base criado. Estrutura pronta para evolução.</p>
-      <div id="statusBox" class="status">Carregando módulo...</div>
+      <p class="subtitle">Listagem de inscrições da aba INSCRICOES.</p>
+
+      <div id="loadingBox" class="status">Carregando inscrições...</div>
+      <div id="errorBox" class="status error" style="display:none;"></div>
+      <div id="emptyBox" class="status" style="display:none;">Nenhuma inscrição encontrada.</div>
+
+      <div id="tableWrap" class="tableWrap" style="display:none;">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th>ID Inscrição</th>
+              <th>ID Usuário</th>
+              <th>ID Evento</th>
+              <th>Status</th>
+              <th>Data Inscrição</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
     </div>
 
     <?!= include('InscricaoScripts'); ?>

@@ -6,7 +6,7 @@
 function apiInscricoesListarResumo(payload) {
   try {
     var p = _dgmbNormalizeInscricaoPayload_(payload);
-    var data = inscricaoServiceListarResumo_(p);
+    var data = inscricaoControllerListarResumo_(p);
 
     return dgmbOk({
       items: data.items,

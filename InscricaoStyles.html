@@ -8,7 +8,7 @@
   }
 
   .wrap {
-    max-width: 880px;
+    max-width: 980px;
     margin: 0 auto;
     background: #fff;
     border: 1px solid #e5e7eb;
@@ -31,11 +31,35 @@
     border-radius: 8px;
     border: 1px solid #d1d5db;
     background: #f9fafb;
+    margin-bottom: 12px;
   }
 
-  .status.ok {
-    color: #065f46;
-    border-color: #a7f3d0;
-    background: #ecfdf5;
+  .status.error {
+    color: #991b1b;
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+
+  .tableWrap {
+    overflow-x: auto;
+  }
+
+  .tbl {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .tbl th,
+  .tbl td {
+    border: 1px solid #e5e7eb;
+    padding: 8px;
+    text-align: left;
+    font-size: 14px;
+    word-break: break-word;
+  }
+
+  .tbl th {
+    background: #f3f4f6;
   }
 </style>
