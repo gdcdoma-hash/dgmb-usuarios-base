@@ -6,14 +6,20 @@
   </head>
   <body>
     <div class="wrap">
-      <h2 class="title">DGMB — Inscrições</h2>
-      <p class="subtitle">Listagem de inscrições da aba INSCRICOES.</p>
+      <header class="header">
+        <h2 class="title">DGMB — Inscrições</h2>
+        <p class="subtitle">Listagem de inscrições da aba INSCRICOES.</p>
+      </header>
 
       <div id="loadingBox" class="status">Carregando inscrições...</div>
       <div id="errorBox" class="status error" style="display:none;"></div>
-      <div id="emptyBox" class="status" style="display:none;">Nenhuma inscrição encontrada.</div>
+      <div id="emptyBox" class="status empty" style="display:none;">
+        <strong>Nenhuma inscrição encontrada</strong>
+        <span>Quando houver registros na aba INSCRICOES, eles aparecerão aqui.</span>
+      </div>
 
       <div id="tableWrap" class="tableWrap" style="display:none;">
+        <div id="listMeta" class="listMeta" aria-live="polite"></div>
         <table class="tbl">
           <thead>
             <tr>
