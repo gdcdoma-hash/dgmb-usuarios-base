@@ -1,5 +1,13 @@
 <script>
   (function () {
+    var PAGE_LIMIT = 50;
+    var state = {
+      page: 1,
+      totalPages: 1,
+      total: 0,
+      items: []
+    };
+
     var els = {
       loadingBox: document.getElementById('loadingBox'),
       errorBox: document.getElementById('errorBox'),
@@ -7,7 +15,10 @@
       tableWrap: document.getElementById('tableWrap'),
       totalBadge: document.getElementById('totalBadge'),
       listMeta: document.getElementById('listMeta'),
-      tbody: document.getElementById('tbody')
+      tbody: document.getElementById('tbody'),
+      prevPageBtn: document.getElementById('prevPageBtn'),
+      nextPageBtn: document.getElementById('nextPageBtn'),
+      pageInfo: document.getElementById('pageInfo')
     };
 
     function hideTable() {
@@ -15,6 +26,9 @@
       if (els.tbody) els.tbody.innerHTML = '';
       if (els.listMeta) els.listMeta.textContent = '';
       if (els.totalBadge) els.totalBadge.textContent = '';
+      if (els.pageInfo) els.pageInfo.textContent = '';
+      if (els.prevPageBtn) els.prevPageBtn.disabled = true;
+      if (els.nextPageBtn) els.nextPageBtn.disabled = true;
     }
 
     function setStatusVisibility(showLoading, showErrorState, showEmptyState, showList) {
@@ -136,6 +150,23 @@
       }
     }
 
+    function updatePaginationUi() {
+      var page = Number(state.page) || 1;
+      var totalPages = Number(state.totalPages) || 1;
+
+      if (els.pageInfo) {
+        els.pageInfo.textContent = 'Página ' + page + ' de ' + totalPages;
+      }
+
+      if (els.prevPageBtn) {
+        els.prevPageBtn.disabled = page <= 1;
+      }
+
+      if (els.nextPageBtn) {
+        els.nextPageBtn.disabled = page >= totalPages;
+      }
+    }
+
     function renderRows(items, total) {
       if (!els.tbody) return;
 
@@ -161,13 +192,19 @@
       }
 
       if (els.listMeta) {
-        els.listMeta.textContent = 'Exibindo ' + items.length + ' registro(s) nesta visualização.';
+        var start = total > 0 ? ((state.page - 1) * PAGE_LIMIT) + 1 : 0;
+        var end = total > 0 ? Math.min(start + items.length - 1, total) : 0;
+        els.listMeta.textContent = 'Exibindo ' + start + '–' + end + ' de ' + total + ' registro(s).';
       }
 
+      updatePaginationUi();
       setStatusVisibility(false, false, false, true);
     }
 
-    function carregarInscricoes() {
+    function carregarInscricoes(page) {
+      var targetPage = Number(page) || 1;
+      if (targetPage < 1) targetPage = 1;
+
       setLoading(true);
       hideTable();
 
@@ -183,7 +220,14 @@
 
           var data = resp.data || {};
           var items = Array.isArray(data.items) ? data.items : [];
-          var total = Number(data.total) || items.length;
+          var total = Number(data.total) || 0;
+          var totalPages = Number(data.totalPages) || Math.max(1, Math.ceil(total / PAGE_LIMIT));
+          var currentPage = Number(data.page) || targetPage;
+
+          state.page = currentPage;
+          state.totalPages = totalPages;
+          state.total = total;
+          state.items = items;
 
           if (!items.length) {
             showEmpty();
@@ -195,9 +239,23 @@
         .withFailureHandler(function (err) {
           showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
         })
-        .apiInscricoesListarResumo({ page: 1, limit: 50 });
+        .apiInscricoesListarResumo({ page: targetPage, limit: PAGE_LIMIT });
     }
 
-    carregarInscricoes();
+    if (els.prevPageBtn) {
+      els.prevPageBtn.addEventListener('click', function () {
+        if (state.page <= 1) return;
+        carregarInscricoes(state.page - 1);
+      });
+    }
+
+    if (els.nextPageBtn) {
+      els.nextPageBtn.addEventListener('click', function () {
+        if (state.page >= state.totalPages) return;
+        carregarInscricoes(state.page + 1);
+      });
+    }
+
+    carregarInscricoes(1);
   })();
 </script>
