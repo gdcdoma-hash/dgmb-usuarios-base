@@ -54,6 +54,12 @@ function getFiltroNomeEl() {
   ]);
 }
 
+function parsePositiveInt(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 1) return fallback;
+  return Math.floor(n);
+}
+
 function getFiltroStatusEl() {
   return getElFirst([
     'fStatus',
@@ -221,8 +227,8 @@ function loadState() {
     if (!parsed || typeof parsed !== 'object') return;
 
     state = {
-      page: Number(parsed.page || 1),
-      limit: Number(parsed.limit || 10),
+      page: parsePositiveInt(parsed.page, 1),
+      limit: parsePositiveInt(parsed.limit, 10),
       filtros: {
         nome: (parsed.filtros && parsed.filtros.nome) ? String(parsed.filtros.nome) : '',
         status: (parsed.filtros && parsed.filtros.status) ? String(parsed.filtros.status) : '',
@@ -234,8 +240,6 @@ function loadState() {
       }
     };
 
-    if (state.page < 1) state.page = 1;
-    if (!state.limit || state.limit < 1) state.limit = 10;
   } catch (e) {}
 }
 
@@ -326,7 +330,13 @@ function checkDateBR(sample) { return safeDateBR(sample); }
    ========================= */
 function setLoading(on) { if (els.loadingBox) els.loadingBox.style.display = on ? 'block' : 'none'; }
 function showError(msg) {
-  if (els.errorMsg) els.errorMsg.textContent = msg || 'Erro ao carregar.';
+  const safeMsg = msg || 'Erro ao carregar.';
+  if (els.errorMsg) {
+    els.errorMsg.textContent = safeMsg;
+  } else if (els.errorBox) {
+    // fallback para layouts sem #errorMsg dedicado
+    els.errorBox.textContent = safeMsg;
+  }
   if (els.errorBox) els.errorBox.style.display = 'block';
 }
 function hideError() { if (els.errorBox) els.errorBox.style.display = 'none'; }
@@ -659,8 +669,8 @@ function renderTable(items, opts = {}) {
    Paginação UI
    ========================= */
 function updatePaginationUI(page, totalPages) {
-  const p = Number(page || 1);
-  const tp = Number(totalPages || 1);
+  const p = parsePositiveInt(page, 1);
+  const tp = parsePositiveInt(totalPages, 1);
   if (els.pageInfo) els.pageInfo.textContent = `Página ${p} de ${tp}`;
   if (els.btnPrev) els.btnPrev.disabled = (p <= 1) || tp <= 1;
   if (els.btnNext) els.btnNext.disabled = (p >= tp) || tp <= 1;
@@ -670,9 +680,12 @@ function updatePaginationUI(page, totalPages) {
    Fetch helpers + pending
    ========================= */
 function buildPayloadFromState() {
+  state.page = parsePositiveInt(state.page, 1);
+  state.limit = parsePositiveInt(state.limit, 10);
+
   return {
-    page: Number(state.page || 1),
-    limit: Number(state.limit || 10),
+    page: state.page,
+    limit: state.limit,
     filtros: {
       nome: state.filtros.nome || '',
       status: state.filtros.status || '',
@@ -839,8 +852,8 @@ function onStatusChange() {
 function onLimitChange() {
   const selLimit = getLimitEl();
   if (!selLimit) return;
-  const v = Number(selLimit.value || 10);
-  state.limit = v || 10;
+  state.limit = parsePositiveInt(selLimit.value, 10);
+  selLimit.value = String(state.limit);
   state.page = 1;
   saveState();
   fetchAndRender(null, { force: true });
@@ -901,6 +914,9 @@ function bindSortHeaderClicks() {
    Init
    ========================= */
 function initDGMBUsuariosBase() {
+  if (initDGMBUsuariosBase._initialized) return;
+  initDGMBUsuariosBase._initialized = true;
+
   bindEls();
   loadState();
   applyStateToUI();
