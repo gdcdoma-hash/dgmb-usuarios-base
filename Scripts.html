@@ -33,6 +33,7 @@ function getElFirst(idsOrSelectors) {
 }
 function getFiltroNomeEl() {
   return getElFirst([
+    'fNome',
     'filtroNome',
     'filterNome',
     'nomeFilter',
@@ -49,13 +50,13 @@ function getFiltroNomeEl() {
     '#searchNome',
     'input[name="filtro_nome"]',
     'input[name="nome"]',
-    'input[name="filterNome"]',
-    'input[type="text"]'
+    'input[name="filterNome"]'
   ]);
 }
 
 function getFiltroStatusEl() {
   return getElFirst([
+    'fStatus',
     'filtroStatus',
     'filterStatus',
     'statusFilter',
@@ -64,6 +65,7 @@ function getFiltroStatusEl() {
     '#filterStatus',
     '#statusFilter',
     '#status',
+    '#fStatus',
     'select[name="filtro_status"]',
     'select[name="status"]'
   ]);
@@ -71,6 +73,7 @@ function getFiltroStatusEl() {
 
 function getFiltroCidadeEl() {
   return getElFirst([
+    'fCidade',
     'filtroCidadeUF',
     'filtroCidade',
     'filterCidadeUF',
@@ -83,6 +86,7 @@ function getFiltroCidadeEl() {
     '#cidadeFilter',
     '#cidade_uf',
     '#cidadeUf',
+    '#fCidade',
     'input[name="filtro_cidade_uf"]',
     'input[name="cidade_uf"]',
     'input[name="cidadeUf"]'
@@ -91,6 +95,7 @@ function getFiltroCidadeEl() {
 
 function getLimitEl() {
   return getElFirst([
+    'fLimit',
     'limitSelect',
     'porPagina',
     'selectLimit',
@@ -105,6 +110,7 @@ function getLimitEl() {
     '#filtroLimit',
     '#qtdPorPagina',
     '#itensPorPagina',
+    '#fLimit',
     'select[name="limit"]',
     'select[name="pageSize"]'
   ]);
@@ -163,28 +169,11 @@ const els = {
 };
 
 function bindEls() {
-  els.inpNome   = getElFirst(['filtroNome','filterNome','nomeFilter','#filtroNome','#filterNome','input[name="filtro_nome"]']);
-  els.selStatus = getElFirst(['filtroStatus','filterStatus','statusFilter','#filtroStatus','#filterStatus','select[name="filtro_status"]']);
-  els.inpCidade = getElFirst(['filtroCidadeUF','filtroCidade','filterCidadeUF','cidadeFilter','#filtroCidadeUF','#filterCidadeUF','input[name="filtro_cidade_uf"]']);
+  els.inpNome   = getFiltroNomeEl();
+  els.selStatus = getFiltroStatusEl();
+  els.inpCidade = getFiltroCidadeEl();
 
-  els.selLimit  = getElFirst([
-    'limitSelect',
-    'porPagina',
-    'selectLimit',
-    'pageSize',
-    'filtroLimit',
-    'qtdPorPagina',
-    'itensPorPagina',
-    '#limitSelect',
-    '#porPagina',
-    '#selectLimit',
-    '#pageSize',
-    '#filtroLimit',
-    '#qtdPorPagina',
-    '#itensPorPagina',
-    'select[name="limit"]',
-    'select[name="pageSize"]'
-  ]);
+  els.selLimit  = getLimitEl();
 
   els.btnAplicar = getElFirst([
     'btnAplicar',
