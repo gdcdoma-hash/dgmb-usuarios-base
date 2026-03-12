@@ -13,8 +13,8 @@ var DGMB_INSCRICOES_FIELDS_ = [
 
 var DGMB_INSCRICOES_FIELD_ALIASES_ = {
   id_inscricao: ['id_inscricao', 'idinscricao', 'inscricao_id', 'id'],
-  id_usuario: ['id_usuario', 'idusuario', 'usuario_id', 'user_id'],
-  id_evento: ['id_evento', 'idevento', 'evento_id'],
-  status: ['status', 'situacao'],
+  id_usuario: ['id_usuario', 'idusuario', 'usuario_id', 'user_id', 'id_dgmb'],
+  id_evento: ['id_evento', 'idevento', 'evento_id', 'id_desafio'],
+  status: ['status', 'situacao', 'status_inscricao'],
   data_inscricao: ['data_inscricao', 'datainscricao', 'dt_inscricao', 'data', 'created_at']
 };
