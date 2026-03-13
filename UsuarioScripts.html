@@ -545,14 +545,13 @@ function fastHashDJB2(str) {
 }
 function signatureForItems(items) {
   try {
-    const arr = Array.isArray(items) ? items : [];
+    const arr = Array.isArray(items) ? items.map(normalizeUsuarioItem) : [];
     let s = `len=${arr.length}|`;
     const take = arr.length <= 60 ? arr.length : 60;
     for (let i = 0; i < take; i++) {
       const it = arr[i] || {};
       s += [
         safeText(it.id_dgmb),
-        safeText(it.id_usuario),
         safeText(it.nome),
         safeText(it.status),
         safeText(it.cidade_uf),
@@ -564,7 +563,6 @@ function signatureForItems(items) {
       const it = arr[arr.length - 1] || {};
       s += 'last:' + [
         safeText(it.id_dgmb),
-        safeText(it.id_usuario),
         safeText(it.nome),
         safeText(it.status),
         safeText(it.cidade_uf),
@@ -613,6 +611,18 @@ function buildStatusBadge(statusRaw) {
   return span;
 }
 
+function normalizeUsuarioItem(raw) {
+  const it = raw || {};
+  return {
+    nome: safeText(it.nome),
+    whatsapp: safeText(it.whatsapp),
+    cidade_uf: safeText(it.cidade_uf),
+    status: safeText(it.status),
+    id_dgmb: safeText(it.id_dgmb),
+    data_criacao: safeText(it.data_criacao)
+  };
+}
+
 function renderTable(items, opts = {}) {
   const force = !!opts.force;
 
@@ -621,7 +631,7 @@ function renderTable(items, opts = {}) {
 
   if (!els.tbody) return;
 
-  const arr = Array.isArray(items) ? items : [];
+  const arr = Array.isArray(items) ? items.map(normalizeUsuarioItem) : [];
   clearTbody();
 
   // Ordem fixa:
@@ -707,22 +717,22 @@ function runPendingIfAny() {
   pendingFetch = false;
   pendingPayload = null;
   pendingForce = false;
-  fetchAndRender(p, { force: f });
+  carregarUsuariosResumo(p, { force: f });
 }
 
 /* =========================
    Fetch principal
    ========================= */
-function fetchAndRender(payloadOverride, opts = {}) {
+function carregarUsuariosResumo(payloadOverride, opts = {}) {
   const force = !!opts.force;
   const payload = payloadOverride || buildPayloadFromState();
   const cacheKey = makeCacheKey(payload);
 
   // Cache page (RESP 11): se tem, renderiza sem backend
   const cached = cacheGet(cacheKey);
-  if (cached && cached.ok && cached.data && cached.data.data) {
+  if (cached && cached.ok && cached.data) {
     hideError();
-    const d = cached.data.data;
+    const d = cached.data;
     const itemsSorted = sortItemsClient(d.items || []);
     renderTable(itemsSorted, { force });
     updatePaginationUI(d.page, d.totalPages);
@@ -764,7 +774,7 @@ function fetchAndRender(payloadOverride, opts = {}) {
 
         const itemsSorted = sortItemsClient(items);
 
-        cachePut(cacheKey, { ok: true, data: resp });
+        cachePut(cacheKey, { ok: true, data: d });
 
         renderTable(itemsSorted, { force });
         updatePaginationUI(d.page, d.totalPages);
@@ -794,7 +804,7 @@ function fetchAndRender(payloadOverride, opts = {}) {
 function onFilterChangeResetPageAndFetch() {
   state.page = 1;
   saveState();
-  fetchAndRender(null, { force: false });
+  carregarUsuariosResumo(null, { force: false });
 }
 
 function onAplicarFiltros() {
@@ -808,7 +818,7 @@ function onAplicarFiltros() {
 
   state.page = 1;
   saveState();
-  fetchAndRender(null, { force: true });
+  carregarUsuariosResumo(null, { force: true });
 }
 
 function onLimparFiltros() {
@@ -826,7 +836,7 @@ function onLimparFiltros() {
   state.page = 1;
 
   saveState();
-  fetchAndRender(null, { force: true });
+  carregarUsuariosResumo(null, { force: true });
 }
 const onNomeInput = debounce(() => {
   const inpNome = getFiltroNomeEl();
@@ -856,25 +866,25 @@ function onLimitChange() {
   selLimit.value = String(state.limit);
   state.page = 1;
   saveState();
-  fetchAndRender(null, { force: true });
+  carregarUsuariosResumo(null, { force: true });
 }
 
 function onPrev() {
   if (state.page <= 1) return;
   state.page -= 1;
   saveState();
-  fetchAndRender(null, { force: false });
+  carregarUsuariosResumo(null, { force: false });
 }
 
 function onNext() {
   state.page += 1;
   saveState();
-  fetchAndRender(null, { force: false });
+  carregarUsuariosResumo(null, { force: false });
 }
 
 function onRetry() {
   hideError();
-  fetchAndRender(null, { force: true });
+  carregarUsuariosResumo(null, { force: true });
 }
 
 function bindSortHeaderClicks() {
@@ -898,14 +908,14 @@ function bindSortHeaderClicks() {
       const key = makeCacheKey(payload);
       const cached = cacheGet(key);
 
-      if (cached && cached.ok && cached.data && cached.data.data) {
-        const d = cached.data.data;
+      if (cached && cached.ok && cached.data) {
+        const d = cached.data;
         const itemsSorted = sortItemsClient(d.items || []);
         renderTable(itemsSorted, { force: true });
         return;
       }
 
-      fetchAndRender(payload, { force: true });
+      carregarUsuariosResumo(payload, { force: true });
     });
   });
 }
@@ -945,7 +955,7 @@ function initDGMBUsuariosBase() {
   try { checkColumnConfig(); } catch(e) {}
   try { checkDateBR('2026-03-03'); } catch(e) {}
 
-  fetchAndRender(null, { force: true });
+  carregarUsuariosResumo(null, { force: true });
 }
 
 document.addEventListener('DOMContentLoaded', initDGMBUsuariosBase);
