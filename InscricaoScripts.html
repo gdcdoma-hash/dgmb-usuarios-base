@@ -9,6 +9,8 @@
       items: [],
       isLoading: false
     };
+    var requestSeq = 0;
+    var latestRequestSeq = 0;
 
     var els = {
       loadingBox: document.getElementById('loadingBox'),
@@ -221,6 +223,8 @@
       var config = params || {};
       var targetLimit = parsePositiveInt(config.limit, state.limit || DEFAULT_PAGE_LIMIT);
       var targetPage = Number(config.page) || state.page || 1;
+      var currentRequestSeq = ++requestSeq;
+      latestRequestSeq = currentRequestSeq;
 
       if (config.resetPage || targetLimit !== state.limit) {
         targetPage = 1;
@@ -233,6 +237,8 @@
 
       google.script.run
         .withSuccessHandler(function (resp) {
+          if (currentRequestSeq !== latestRequestSeq) return;
+
           state.isLoading = false;
           updatePaginationUi();
 
@@ -269,6 +275,8 @@
           renderRows(items, total);
         })
         .withFailureHandler(function (err) {
+          if (currentRequestSeq !== latestRequestSeq) return;
+
           state.isLoading = false;
           updatePaginationUi();
           showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
