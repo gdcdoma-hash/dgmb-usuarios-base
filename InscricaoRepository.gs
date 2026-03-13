@@ -66,6 +66,10 @@ function _dgmbInscricaoSanitizePage_(page) {
 function _dgmbInscricaoSanitizeLimit_(limit) {
   var out = parseInt(limit, 10);
   if (!isFinite(out) || out < 1) return dgmbInscricaoDefaultLimit_();
+
+  var maxLimit = 100;
+  if (out > maxLimit) return maxLimit;
+
   return out;
 }
 
