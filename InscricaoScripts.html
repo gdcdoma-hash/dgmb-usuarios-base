@@ -6,7 +6,8 @@
       limit: DEFAULT_PAGE_LIMIT,
       totalPages: 1,
       total: 0,
-      items: []
+      items: [],
+      isLoading: false
     };
 
     var els = {
@@ -46,7 +47,9 @@
     }
 
     function setLoading(on) {
+      state.isLoading = !!on;
       setStatusVisibility(on, false, false, false);
+      updatePaginationUi();
     }
 
     function showError(message) {
@@ -166,11 +169,15 @@
       }
 
       if (els.prevPageBtn) {
-        els.prevPageBtn.disabled = page <= 1;
+        els.prevPageBtn.disabled = state.isLoading || page <= 1;
       }
 
       if (els.nextPageBtn) {
-        els.nextPageBtn.disabled = page >= totalPages;
+        els.nextPageBtn.disabled = state.isLoading || page >= totalPages;
+      }
+
+      if (els.limitSelect) {
+        els.limitSelect.disabled = state.isLoading;
       }
     }
 
@@ -209,6 +216,8 @@
     }
 
     function carregarInscricoes(params) {
+      if (state.isLoading) return;
+
       var config = params || {};
       var targetLimit = parsePositiveInt(config.limit, state.limit || DEFAULT_PAGE_LIMIT);
       var targetPage = Number(config.page) || state.page || 1;
@@ -224,6 +233,9 @@
 
       google.script.run
         .withSuccessHandler(function (resp) {
+          state.isLoading = false;
+          updatePaginationUi();
+
           if (!resp || !resp.ok || !resp.data) {
             var msg = (resp && resp.error && resp.error.message)
               ? resp.error.message
@@ -257,6 +269,8 @@
           renderRows(items, total);
         })
         .withFailureHandler(function (err) {
+          state.isLoading = false;
+          updatePaginationUi();
           showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
         })
         .apiInscricoesListarResumo({ page: targetPage, limit: targetLimit });
