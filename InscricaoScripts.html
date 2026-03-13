@@ -61,6 +61,17 @@
       hideTable();
     }
 
+    function getApiErrorMessage(resp) {
+      if (!resp || !resp.error) return '';
+
+      var message = resp.error.message;
+      if (typeof message === 'string') {
+        message = message.trim();
+      }
+
+      return message ? String(message) : '';
+    }
+
     function showEmpty() {
       setStatusVisibility(false, false, true, false);
       hideTable();
@@ -246,9 +257,7 @@
           updatePaginationUi();
 
           if (!resp || !resp.ok || !resp.data) {
-            var msg = (resp && resp.error && resp.error.message)
-              ? resp.error.message
-              : 'Falha ao obter inscrições.';
+            var msg = getApiErrorMessage(resp) || 'Falha ao obter inscrições.';
             showError(msg);
             return;
           }
