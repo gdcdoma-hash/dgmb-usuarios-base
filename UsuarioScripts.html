@@ -730,9 +730,9 @@ function carregarUsuariosResumo(payloadOverride, opts = {}) {
 
   // Cache page (RESP 11): se tem, renderiza sem backend
   const cached = cacheGet(cacheKey);
-  if (cached && cached.ok && cached.data && cached.data.data) {
+  if (cached && cached.ok && cached.data) {
     hideError();
-    const d = cached.data.data;
+    const d = cached.data;
     const itemsSorted = sortItemsClient(d.items || []);
     renderTable(itemsSorted, { force });
     updatePaginationUI(d.page, d.totalPages);
@@ -774,7 +774,7 @@ function carregarUsuariosResumo(payloadOverride, opts = {}) {
 
         const itemsSorted = sortItemsClient(items);
 
-        cachePut(cacheKey, { ok: true, data: resp });
+        cachePut(cacheKey, { ok: true, data: d });
 
         renderTable(itemsSorted, { force });
         updatePaginationUI(d.page, d.totalPages);
@@ -908,8 +908,8 @@ function bindSortHeaderClicks() {
       const key = makeCacheKey(payload);
       const cached = cacheGet(key);
 
-      if (cached && cached.ok && cached.data && cached.data.data) {
-        const d = cached.data.data;
+      if (cached && cached.ok && cached.data) {
+        const d = cached.data;
         const itemsSorted = sortItemsClient(d.items || []);
         renderTable(itemsSorted, { force: true });
         return;
