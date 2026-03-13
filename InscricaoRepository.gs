@@ -4,11 +4,14 @@
  */
 
 function inscricaoRepoListarResumo_(payloadNormalizado) {
+  var page = _dgmbInscricaoSanitizePage_((payloadNormalizado && payloadNormalizado.page));
+  var limit = _dgmbInscricaoSanitizeLimit_((payloadNormalizado && payloadNormalizado.limit));
+
   var sh = getInscricoesSheet_();
   var values = sh.getDataRange().getValues();
 
   if (!values || values.length < 2) {
-    return { items: [], total: 0 };
+    return { items: [], total: 0, page: 1, limit: limit, totalPages: 1 };
   }
 
   var header = values[0] || [];
@@ -38,7 +41,32 @@ function inscricaoRepoListarResumo_(payloadNormalizado) {
   _dgmbInscricaoSortResumo_(out);
   _dgmbInscricaoRemoveSortMeta_(out);
 
-  return { items: out, total: out.length };
+  var total = out.length;
+  var totalPages = Math.max(1, Math.ceil(total / limit));
+  var pageAtual = Math.min(page, totalPages);
+  var start = (pageAtual - 1) * limit;
+  var end = start + limit;
+  var itemsPaged = out.slice(start, end);
+
+  return {
+    items: itemsPaged,
+    total: total,
+    page: pageAtual,
+    limit: limit,
+    totalPages: totalPages
+  };
+}
+
+function _dgmbInscricaoSanitizePage_(page) {
+  var out = parseInt(page, 10);
+  if (!isFinite(out) || out < 1) return 1;
+  return out;
+}
+
+function _dgmbInscricaoSanitizeLimit_(limit) {
+  var out = parseInt(limit, 10);
+  if (!isFinite(out) || out < 1) return dgmbInscricaoDefaultLimit_();
+  return out;
 }
 
 function _dgmbInscricaoSortResumo_(items) {
