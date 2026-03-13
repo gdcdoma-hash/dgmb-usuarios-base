@@ -13,6 +13,7 @@
  */
 
 function usuarioRepoListarResumo_(payloadNormalizado) {
+  var payload = payloadNormalizado || {};
   var sh = getUsuariosSheet_();
   var values = sh.getDataRange().getValues(); // inclui cabeçalho
 
@@ -33,7 +34,7 @@ function usuarioRepoListarResumo_(payloadNormalizado) {
 
   var map = _dgmb_buildHeaderMap_(header);
 
-  var filtros = (payloadNormalizado && payloadNormalizado.filtros) ? payloadNormalizado.filtros : {};
+  var filtros = payload.filtros || {};
   var fNome = _dgmb_normText_(filtros.nome);
   var fCidade = _dgmb_normText_(filtros.cidade_uf);
   var fStatus = _dgmb_normText_(filtros.status);
