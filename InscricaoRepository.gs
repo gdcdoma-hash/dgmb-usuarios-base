@@ -38,22 +38,14 @@ function inscricaoRepoListarResumo_(payloadNormalizado) {
     out.push(checkInscricaoRowShape_(item));
   }
 
-  _dgmbInscricaoSortResumo_(out);
-  _dgmbInscricaoRemoveSortMeta_(out);
-
-  var total = out.length;
-  var totalPages = Math.max(1, Math.ceil(total / limit));
-  var pageAtual = Math.min(page, totalPages);
-  var start = (pageAtual - 1) * limit;
-  var end = start + limit;
-  var itemsPaged = out.slice(start, end);
+  var paginado = _dgmbInscricaoSortAndPaginateResumo_(out, page, limit);
 
   return {
-    items: itemsPaged,
-    total: total,
-    page: pageAtual,
+    items: paginado.items,
+    total: paginado.total,
+    page: paginado.page,
     limit: limit,
-    totalPages: totalPages
+    totalPages: paginado.totalPages
   };
 }
 
@@ -71,6 +63,24 @@ function _dgmbInscricaoSanitizeLimit_(limit) {
   if (out > maxLimit) return maxLimit;
 
   return out;
+}
+
+function _dgmbInscricaoSortAndPaginateResumo_(items, page, limit) {
+  _dgmbInscricaoSortResumo_(items);
+  _dgmbInscricaoRemoveSortMeta_(items);
+
+  var total = items.length;
+  var totalPages = Math.max(1, Math.ceil(total / limit));
+  var pageAtual = Math.min(page, totalPages);
+  var start = (pageAtual - 1) * limit;
+  var end = start + limit;
+
+  return {
+    items: items.slice(start, end),
+    total: total,
+    page: pageAtual,
+    totalPages: totalPages
+  };
 }
 
 function _dgmbInscricaoSortResumo_(items) {
@@ -115,8 +125,29 @@ function _dgmbInscricaoDateSortKey_(raw) {
   var minute = Number(m[5] || 0);
   var second = Number(m[6] || 0);
 
+  if (
+    day < 1 || day > 31 ||
+    month < 0 || month > 11 ||
+    hour < 0 || hour > 23 ||
+    minute < 0 || minute > 59 ||
+    second < 0 || second > 59
+  ) {
+    return { valid: false, value: 0 };
+  }
+
   var localDate = new Date(year, month, day, hour, minute, second);
   if (isNaN(localDate.getTime())) return { valid: false, value: 0 };
+
+  if (
+    localDate.getFullYear() !== year ||
+    localDate.getMonth() !== month ||
+    localDate.getDate() !== day ||
+    localDate.getHours() !== hour ||
+    localDate.getMinutes() !== minute ||
+    localDate.getSeconds() !== second
+  ) {
+    return { valid: false, value: 0 };
+  }
 
   return { valid: true, value: localDate.getTime() };
 }
