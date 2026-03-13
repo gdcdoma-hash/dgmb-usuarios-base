@@ -166,6 +166,15 @@
       var page = Number(state.page) || 1;
       var totalPages = Number(state.totalPages) || 1;
 
+      if (els.listMeta) {
+        var total = Number(state.total) || 0;
+        var start = total > 0 ? ((page - 1) * state.limit) + 1 : 0;
+        var end = total > 0 ? Math.min(page * state.limit, total) : 0;
+        els.listMeta.innerHTML =
+          '<span class="listMetaLine">Exibindo ' + start + '–' + end + ' de ' + total + ' registros</span>' +
+          '<span class="listMetaLine">Página ' + page + ' de ' + totalPages + '</span>';
+      }
+
       if (els.pageInfo) {
         els.pageInfo.textContent = 'Página ' + page + ' de ' + totalPages;
       }
@@ -205,12 +214,6 @@
 
       if (els.totalBadge) {
         els.totalBadge.textContent = 'Total de inscrições: ' + total;
-      }
-
-      if (els.listMeta) {
-        var start = total > 0 ? ((state.page - 1) * state.limit) + 1 : 0;
-        var end = total > 0 ? Math.min(start + items.length - 1, total) : 0;
-        els.listMeta.textContent = 'Exibindo ' + start + '–' + end + ' de ' + total + ' registro(s).';
       }
 
       updatePaginationUi();
