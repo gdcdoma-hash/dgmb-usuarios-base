@@ -1,8 +1,9 @@
 <script>
   (function () {
-    var PAGE_LIMIT = 50;
+    var DEFAULT_PAGE_LIMIT = 50;
     var state = {
       page: 1,
+      limit: DEFAULT_PAGE_LIMIT,
       totalPages: 1,
       total: 0,
       items: []
@@ -18,8 +19,14 @@
       tbody: document.getElementById('tbody'),
       prevPageBtn: document.getElementById('prevPageBtn'),
       nextPageBtn: document.getElementById('nextPageBtn'),
-      pageInfo: document.getElementById('pageInfo')
+      pageInfo: document.getElementById('pageInfo'),
+      limitSelect: document.getElementById('limitSelect') || document.querySelector('select[name="limit"]')
     };
+
+    function parsePositiveInt(value, fallback) {
+      var parsed = parseInt(value, 10);
+      return (isFinite(parsed) && parsed > 0) ? parsed : fallback;
+    }
 
     function hideTable() {
       if (els.tableWrap) els.tableWrap.style.display = 'none';
@@ -192,7 +199,7 @@
       }
 
       if (els.listMeta) {
-        var start = total > 0 ? ((state.page - 1) * PAGE_LIMIT) + 1 : 0;
+        var start = total > 0 ? ((state.page - 1) * state.limit) + 1 : 0;
         var end = total > 0 ? Math.min(start + items.length - 1, total) : 0;
         els.listMeta.textContent = 'Exibindo ' + start + '–' + end + ' de ' + total + ' registro(s).';
       }
@@ -201,8 +208,15 @@
       setStatusVisibility(false, false, false, true);
     }
 
-    function carregarInscricoes(page) {
-      var targetPage = Number(page) || 1;
+    function carregarInscricoes(params) {
+      var config = params || {};
+      var targetLimit = parsePositiveInt(config.limit, state.limit || DEFAULT_PAGE_LIMIT);
+      var targetPage = Number(config.page) || state.page || 1;
+
+      if (config.resetPage || targetLimit !== state.limit) {
+        targetPage = 1;
+      }
+
       if (targetPage < 1) targetPage = 1;
 
       setLoading(true);
@@ -221,13 +235,19 @@
           var data = resp.data || {};
           var items = Array.isArray(data.items) ? data.items : [];
           var total = Number(data.total) || 0;
-          var totalPages = Number(data.totalPages) || Math.max(1, Math.ceil(total / PAGE_LIMIT));
+          var backendLimit = parsePositiveInt(data.limit, targetLimit);
+          var totalPages = Number(data.totalPages) || Math.max(1, Math.ceil(total / backendLimit));
           var currentPage = Number(data.page) || targetPage;
 
           state.page = currentPage;
+          state.limit = backendLimit;
           state.totalPages = totalPages;
           state.total = total;
           state.items = items;
+
+          if (els.limitSelect) {
+            els.limitSelect.value = String(state.limit);
+          }
 
           if (!items.length) {
             showEmpty();
@@ -239,23 +259,48 @@
         .withFailureHandler(function (err) {
           showError((err && err.message) ? err.message : 'Erro inesperado na comunicação com o servidor.');
         })
-        .apiInscricoesListarResumo({ page: targetPage, limit: PAGE_LIMIT });
+        .apiInscricoesListarResumo({ page: targetPage, limit: targetLimit });
     }
 
     if (els.prevPageBtn) {
       els.prevPageBtn.addEventListener('click', function () {
         if (state.page <= 1) return;
-        carregarInscricoes(state.page - 1);
+        carregarInscricoes({ page: state.page - 1 });
       });
     }
 
     if (els.nextPageBtn) {
       els.nextPageBtn.addEventListener('click', function () {
         if (state.page >= state.totalPages) return;
-        carregarInscricoes(state.page + 1);
+        carregarInscricoes({ page: state.page + 1 });
       });
     }
 
-    carregarInscricoes(1);
+    if (els.limitSelect) {
+      els.limitSelect.addEventListener('change', function () {
+        var selectedLimit = parsePositiveInt(els.limitSelect.value, state.limit || DEFAULT_PAGE_LIMIT);
+        carregarInscricoes({ limit: selectedLimit, resetPage: true });
+      });
+    }
+
+    window.dgmbInscricoesRecarregar = function (opts) {
+      var config = opts || {};
+      carregarInscricoes({
+        page: config.page,
+        limit: config.limit,
+        resetPage: !!config.resetPage
+      });
+    };
+
+    window.addEventListener('dgmb:inscricoes:recarregar', function (event) {
+      var detail = (event && event.detail) || {};
+      carregarInscricoes({
+        page: detail.page,
+        limit: detail.limit,
+        resetPage: !!detail.resetPage
+      });
+    });
+
+    carregarInscricoes({ page: 1 });
   })();
 </script>
