@@ -283,24 +283,6 @@
       });
     }
 
-    window.dgmbInscricoesRecarregar = function (opts) {
-      var config = opts || {};
-      carregarInscricoes({
-        page: config.page,
-        limit: config.limit,
-        resetPage: !!config.resetPage
-      });
-    };
-
-    window.addEventListener('dgmb:inscricoes:recarregar', function (event) {
-      var detail = (event && event.detail) || {};
-      carregarInscricoes({
-        page: detail.page,
-        limit: detail.limit,
-        resetPage: !!detail.resetPage
-      });
-    });
-
     carregarInscricoes({ page: 1 });
   })();
 </script>
