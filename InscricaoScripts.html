@@ -1,6 +1,6 @@
 <script>
   (function () {
-    var DEFAULT_PAGE_LIMIT = 50;
+    var DEFAULT_PAGE_LIMIT = 10;
     var state = {
       page: 1,
       limit: DEFAULT_PAGE_LIMIT,
@@ -311,6 +311,7 @@
     }
 
     if (els.limitSelect) {
+      els.limitSelect.value = String(state.limit);
       els.limitSelect.addEventListener('change', function () {
         var selectedLimit = parsePositiveInt(els.limitSelect.value, state.limit || DEFAULT_PAGE_LIMIT);
         carregarInscricoes({ limit: selectedLimit, resetPage: true });
